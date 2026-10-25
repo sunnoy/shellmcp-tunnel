@@ -1,6 +1,6 @@
 # ShellMCP Tunnel
 
-原生 Rust 本地 MCP 服务，通过官方 OpenAI `tunnel-client` 接入 ChatGPT。Linux、macOS、Windows 共用执行核心，安装器下载并管理官方隧道客户端，安装和运行无需 Python。
+原生 Rust 本地 MCP 服务，通过官方 OpenAI `tunnel-client` 接入 ChatGPT。Linux、macOS、Windows 共用执行核心，安装器下载并管理官方隧道客户端。
 
 发行包支持 Linux、macOS 的 x86_64 / ARM64，以及 Windows x86_64。Windows ARM64 仍为实验性支持，暂不提供发行包。
 
@@ -35,20 +35,16 @@ flowchart LR
 
 ## 安装
 
-只需填写下面的 Tunnel ID 和 API key，把整段提示词交给能操作目标电脑终端的 Agent：
+填写 ID 和 key，将以下提示词交给能操作目标电脑的 Agent：
 
 ```text
-请在这台电脑上安装 ShellMCP Tunnel，让 ChatGPT 通过 OpenAI 隧道调用这台电脑的工具。
+请按说明运行对应系统的 Release 安装脚本，安装 ShellMCP Tunnel，使用默认配置并后台自启动：
+https://github.com/sunnoy/shellmcp-tunnel/blob/main/docs/usage.md#安装
 
-安装说明：https://github.com/sunnoy/shellmcp-tunnel/blob/main/docs/usage.md#安装
-Tunnel ID：<填写你的 Tunnel ID>
-API key：<填写你的 API key>
+Tunnel ID：<你的 ID>
+API key：<你的 key>
 
-请识别当前系统，按安装说明下载并执行对应的 Release 安装脚本，传入 Tunnel ID 和 key 文件路径。Rust agent 从 sunnoy/shellmcp-tunnel 的 GitHub Release 下载预编译二进制，tunnel-client 由安装器从 OpenAI 官方 GitHub Release 下载并校验。不要 clone 仓库或从源码构建，不需要安装 Git、Rust 或 Python。使用默认配置，设置后台运行和登录自启动；Windows 下应无窗口运行。
-
-请将 API key 保存到仅当前用户可访问的私有文件，通过文件传给安装器，不要回显密钥，也不要把它写入源码、命令参数或日志。
-
-完成后检查两个后台服务、本机 MCP 就绪状态和 OpenAI 隧道轮询是否成功，报告实际结果、安装位置和检查/卸载命令，并告诉我如何在 ChatGPT 中连接这个隧道。
+密钥保存为仅当前用户可读的文件，通过文件传给安装器，不回显。完成后验证 MCP 和隧道连接，提供 ChatGPT 接入及卸载方法。
 ```
 
 ## 使用
