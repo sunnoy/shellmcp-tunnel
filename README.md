@@ -6,6 +6,33 @@
 
 当前为早期版本：Linux x86_64 与 Windows x86_64 已实测，macOS 服务安装和 ARM64 完整安装尚未实机验收，ChatGPT 外部工具调用也仍待验收。具体见 [验收记录](docs/local-acceptance.md)。使用前阅读 [安全边界](SECURITY.md)。
 
+## 连接机制
+
+本项目使用 [OpenAI Secure MCP Tunnel 官方机制](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)：`tunnel-client` 主动通过出站 HTTPS 轮询 OpenAI，取回工具请求、转交本机 Rust MCP，再回传结果。电脑需要能访问 `api.openai.com:443`；本地 MCP 保持回环监听，无需开放公网入站端口。
+
+```mermaid
+flowchart LR
+    App["ChatGPT / Responses API"] -->|提交工具请求| OpenAI["OpenAI 隧道服务"]
+    subgraph Computer["你的电脑"]
+        Tunnel["官方 tunnel-client"]
+        Agent["Rust MCP：127.0.0.1:18700/mcp"]
+        Tunnel -->|本机 HTTP 调用| Agent
+        Agent -->|执行结果| Tunnel
+    end
+    Tunnel -->|出站 HTTPS：轮询与回传| OpenAI
+    OpenAI -->|返回结果| App
+```
+
+本项目的安装器负责部署图中的两个本机组件，并配置它们之间的 HTTP 连接。OpenAI 托管隧道由用户在 Platform 创建和授权。
+
+## 准备 Tunnel ID 和 key
+
+1. 在 [Platform 隧道设置](https://platform.openai.com/settings/organization/tunnels) 创建或选择隧道，取得 `tunnel_id`。创建/管理需要组织级的 **Tunnels Read + Manage** 权限。
+2. 将隧道关联到目标 Platform 组织和 ChatGPT 工作区。运行客户端、在 ChatGPT 中选择隧道需要 **Tunnels Read + Use**；ChatGPT 工作区还需允许使用自定义 MCP。
+3. 准备有相应隧道使用权限的 runtime API key，保存为本机私有文件，供下面的 `--key-file` 读取。key 由 tunnel-client 使用，不作为本地 MCP 的 Bearer 凭据。
+
+权限与关联规则以 [官方接入说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#permissions-and-access) 为准；安装器不会创建隧道或修改工作区权限。
+
 ## 安装本地模式
 
 先从源码构建 `shellmcp-agent`（见下文）；Windows 还需同目录的 `shellmcp-host.exe`。然后运行一次：
@@ -36,7 +63,32 @@
 
 ## 使用
 
-ChatGPT 新建自定义 MCP：Connection 选择 **Tunnel**，选择安装时的 Tunnel ID，认证选择 **No Auth**。需要让隧道关联目标 ChatGPT 工作区；安装器不会创建隧道或修改工作区权限。[OpenAI 官方说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
+### 接入 ChatGPT
+
+安装完成后，保持两个后台服务运行：
+
+1. 运行 `shellmcp-agent local doctor`，确认本地 MCP 与隧道均就绪。
+2. 在 [ChatGPT Plugins](https://chatgpt.com/plugins) 添加自定义 MCP，连接方式选 **Tunnel**，选择或填写安装时的 Tunnel ID。本项目的本地 MCP 无应用层认证，认证选 **No Auth**。
+3. 在对话中启用该连接，要求调用 `get_environment`，核对返回的主机、系统和版本。
+
+看不到隧道时，先核对上面的工作区关联和权限。[官方 ChatGPT 接入步骤](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#connect-from-chatgpt)
+
+### 接入 Responses API
+
+在 MCP 工具配置中使用 `tunnel_id`；`server_url` 用于直接可达的 MCP 服务，不填 OpenAI 托管隧道地址。[官方 API 接入说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#connect-from-the-responses-api)
+
+```json
+{
+  "type": "mcp",
+  "server_label": "my_computer",
+  "tunnel_id": "tunnel_你的ID",
+  "allowed_tools": ["get_environment"]
+}
+```
+
+这是请求中 `tools` 数组的一项。外部工具调用成功才算完成端到端验收；`doctor` 通过仅证明两个本机组件就绪。实测中，Responses API 返回 `429 credit_balance_exhausted` 时隧道仍可正常轮询，模型测试需先解决 API 余额问题，见 [验收记录](docs/local-acceptance.md)。
+
+### 日常管理
 
 ```sh
 shellmcp-agent local doctor                # 同时检查实际运行的两个组件
