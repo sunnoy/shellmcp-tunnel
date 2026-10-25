@@ -140,7 +140,30 @@ async fn mcp_shell_dedup_background_and_perimeter() {
     let args = json!({"command":command,"cwd":out.path(),"timeout_s":30});
     let first = s.call(2, "shell_exec", args.clone()).await;
     assert_eq!(first["result"]["isError"], false, "{first}");
-    assert_eq!(content(&first)["job"]["exit_code"], 0);
+    if content(&first)["job"]["exit_code"] != 0 {
+        let job = content(&first)["job"]["job_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        eprintln!(
+            "Job details: {}",
+            shellmcp_agent::jobs::output(s.dir.path(), &job, 0, 65536).unwrap()
+        );
+        let job_dir = s.dir.path().join("jobs").join(&job);
+        eprintln!(
+            "request_exists={}, consumed_exists={}",
+            job_dir.join("request.json").exists(),
+            job_dir.join("consumed.json").exists()
+        );
+        #[cfg(windows)]
+        {
+            let snapshot = Command::new("powershell.exe")
+                .args(["-NoProfile", "-NonInteractive", "-Command", "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('shellmcp-agent.exe','powershell.exe') } | Select-Object Name,ProcessId,ParentProcessId,ThreadCount,CreationDate | ConvertTo-Json -Compress"])
+                .output().unwrap();
+            eprintln!("Processes: {}", String::from_utf8_lossy(&snapshot.stdout));
+        }
+    }
+    assert_eq!(content(&first)["job"]["exit_code"], 0, "{first}");
     let replay = s.call(2, "shell_exec", args).await;
     assert_eq!(first, replay);
     for with_session in [false, true] {
