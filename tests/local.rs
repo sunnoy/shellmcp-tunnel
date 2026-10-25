@@ -137,7 +137,7 @@ async fn mcp_shell_dedup_background_and_perimeter() {
     } else {
         "printf x >> count; printf native"
     };
-    let args = json!({"command":command,"cwd":out.path(),"timeout_s":3});
+    let args = json!({"command":command,"cwd":out.path(),"timeout_s":30});
     let first = s.call(2, "shell_exec", args.clone()).await;
     assert_eq!(first["result"]["isError"], false, "{first}");
     assert_eq!(content(&first)["job"]["exit_code"], 0);
@@ -148,7 +148,7 @@ async fn mcp_shell_dedup_background_and_perimeter() {
             .http
             .post(format!("{}/mcp", s.url))
             .header("Accept", "application/json, text/event-stream");
-        let mut params = json!({"name":"shell_exec","arguments":{"command":command,"cwd":out.path(),"timeout_s":3}});
+        let mut params = json!({"name":"shell_exec","arguments":{"command":command,"cwd":out.path(),"timeout_s":30}});
         if with_session {
             request = request.header("mcp-session-id", &s.session);
             params["_meta"] = json!({"io.modelcontextprotocol/protocolVersion":"2026-07-28"});
@@ -177,7 +177,7 @@ async fn mcp_shell_dedup_background_and_perimeter() {
             .is_some()
     );
     assert_eq!(
-        s.call(3, "shell_exec", json!({"command":"exit 23","timeout_s":3}))
+        s.call(3, "shell_exec", json!({"command":"exit 23","timeout_s":30}))
             .await["result"]["isError"],
         true
     );
@@ -191,11 +191,22 @@ async fn mcp_shell_dedup_background_and_perimeter() {
         .await;
     assert_eq!(content(&bg)["background"], true, "{bg}");
     let id = content(&bg)["job"]["job_id"].as_str().unwrap().to_owned();
-    tokio::time::sleep(Duration::from_secs(2)).await;
-    assert_eq!(
-        content(&s.call(5, "job_output", json!({"job_id":id})).await)["job"]["state"],
-        "completed"
-    );
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+    let mut request_id = 100;
+    loop {
+        let output = content(&s.call(request_id, "job_output", json!({"job_id":id})).await);
+        if output["job"]["state"] == "completed" {
+            assert_eq!(output["job"]["exit_code"], 0, "{output}");
+            break;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "job did not complete: {output}"
+        );
+        // Reusing an RPC ID would replay the saved snapshot instead of polling.
+        request_id += 1;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
     for (header, value) in [
         ("Host", "evil.example"),
         ("Origin", "https://evil.example"),

@@ -57,7 +57,7 @@ Linux / macOS（bash）：
 ```sh
 cargo run --bin package-local -- \
   --out /private/shellmcp-release \
-  --base-url https://github.com/sunnoy/shellmcp-tunnel/releases/download/v0.3.1 \
+  --base-url https://github.com/sunnoy/shellmcp-tunnel/releases/download/v0.3.2 \
   --artifact linux-amd64=target/release/shellmcp-agent \
   --artifact windows-amd64=/private/windows/shellmcp-agent.exe \
   --host-artifact windows-amd64=/private/windows/shellmcp-host.exe
