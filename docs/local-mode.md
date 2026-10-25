@@ -60,4 +60,4 @@ CLI 不会添加到全局 PATH。可从下载包运行，也可以从 `install.j
 
 Windows 使用 x86_64 实机运行本地 MCP 回归，另通过真正的交互登录计划任务验证 GUI 宿主；测试不是单纯交叉编译。发现并修复了任务 XML 编码、当前用户 SID、Windows 路径规范化以及回滚进程锁/启动顺序问题。完整结果和未完成项见 [2026-10-25 验收记录](local-acceptance.md)。
 
-macOS 代码路径和 CI 已提供，尚未在实机验收。Windows ARM64 和 Linux ARM64 未做本次运行验证。不得把跨平台代码或 CI 配置描述为所有平台已实测。
+macOS 的原生编译和工具测试由 CI 验证，LaunchAgent 安装/回滚尚未实机验收。Windows ARM64 和 Linux ARM64 未做本次运行验证。不得把跨平台编译或工具测试描述为所有平台完整安装已实测。

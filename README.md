@@ -4,7 +4,7 @@
 
 本仓库专用于本地 MCP + OpenAI 隧道，已经移除原 ShellMCP 云平台注册、WebSocket、签名许可及云端更新实现。项目名为 `shellmcp-tunnel`，二进制名 `shellmcp-agent`、`shellmcp-host` 和 `local` 子命令沿用原生安装接口。
 
-当前为早期版本：Linux x86_64 与 Windows x86_64 已实测，macOS 和 ARM64 尚未实机验收，ChatGPT 外部工具调用也仍待验收。具体见 [验收记录](docs/local-acceptance.md)。使用前阅读 [安全边界](SECURITY.md)。
+当前为早期版本：Linux x86_64 与 Windows x86_64 已实测，macOS 服务安装和 ARM64 完整安装尚未实机验收，ChatGPT 外部工具调用也仍待验收。具体见 [验收记录](docs/local-acceptance.md)。使用前阅读 [安全边界](SECURITY.md)。
 
 ## 安装本地模式
 

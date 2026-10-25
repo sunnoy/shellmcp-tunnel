@@ -58,10 +58,12 @@ TLS/ZIP 依赖使用 `rustls-webpki 0.103.16`、`webpki-roots 1.0.11`、`zip 9.1
 - Windows x86_64 实机：15 项通过，包含 MCP、文件工具、真实无窗口计划任务、官方 ZIP 解压/执行及损坏包拒绝。
 - Linux 和 Windows GNU 目标的 clippy（warnings 为错误）通过；fmt、shellcheck、本地文档链接检查通过。
 - cargo-audit 0.22.2 / RustSec 2026-10-24：0 个已知漏洞，无忽略项。Gitleaks 8.30.1 扫描独立源码未发现密钥。
-- macOS 原生 CI 待首次 push 后执行；CI 不包含真实桌面登录任务或外部 ChatGPT 调用。真实 Windows 桌面测试通过 `SHELLMCP_TEST_WINDOWS_SERVICE=1` 显式开启。
+- 三平台 CI：[首次独立源码运行](https://github.com/sunnoy/shellmcp-tunnel/actions/runs/40184182785)。CI 不包含真实桌面登录任务或外部 ChatGPT 调用；真实 Windows 桌面测试通过 `SHELLMCP_TEST_WINDOWS_SERVICE=1` 显式开启。
 
 官方压缩包测试默认忽略，需提供对应平台 v0.0.16 包后显式执行：
 
 ```sh
 SHELLMCP_TEST_TUNNEL_ARCHIVE=/path/to/official.zip cargo test --locked --test download -- --include-ignored
 ```
+
+Windows 测试机已通过同一 `local install` 接口升级为独立版本测试构建：实例 ID 与数据库保留，发行目录替换，安装后的 agent/host SHA-256 与本次构建一致。doctor 验证运行中的 MCP 发行身份、真实 shell 和成功的 OpenAI 轮询，安装事务记录已清理。这不替代外部 ChatGPT 工具调用验收。
