@@ -25,9 +25,6 @@ jobs:
           - os: windows-latest
             platform: windows-amd64
             target: x86_64-pc-windows-msvc
-          - os: windows-11-arm
-            platform: windows-arm64
-            target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -91,9 +88,7 @@ jobs:
             --artifact darwin-amd64=artifacts/darwin-amd64/shellmcp-agent \
             --artifact darwin-arm64=artifacts/darwin-arm64/shellmcp-agent \
             --artifact windows-amd64=artifacts/windows-amd64/shellmcp-agent.exe \
-            --artifact windows-arm64=artifacts/windows-arm64/shellmcp-agent.exe \
-            --host-artifact windows-amd64=artifacts/windows-amd64/shellmcp-host.exe \
-            --host-artifact windows-arm64=artifacts/windows-arm64/shellmcp-host.exe
+            --host-artifact windows-amd64=artifacts/windows-amd64/shellmcp-host.exe
           cp LICENSE dist/LICENSE
           shellcheck -S warning dist/install-local.sh
           bash -n dist/install-local.sh
@@ -105,13 +100,13 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cat > release-notes.md <<'NOTES'
-          Prebuilt Rust executables for Linux, macOS and Windows (x86_64 / ARM64).
+          Prebuilt Rust executables for Linux and macOS (x86_64 / ARM64), and Windows x86_64.
 
           Download `install-local.sh` or `install-local.ps1` and pass your Tunnel ID and key file. The installer selects and verifies the native executable, downloads the pinned official OpenAI tunnel-client, and configures background services. Git, Rust and Python are not required on the destination computer.
 
           Installation commands: https://github.com/sunnoy/shellmcp-tunnel/blob/main/docs/usage.md#安装
 
-          Native builds and tool tests run on all six platforms. Full service installation has been tested on Linux x86_64 and Windows x86_64; other service lifecycles and external ChatGPT calls remain unverified. See docs/acceptance.md for details.
+          Native builds and tool tests pass on all five published platforms. Windows ARM64 remains experimental and has no release binary. Full service installation has been tested on Linux x86_64 and Windows x86_64; other service lifecycles and external ChatGPT calls remain unverified. See docs/acceptance.md for details.
           NOTES
           gh release create "$RELEASE_TAG" dist/* --verify-tag --draft --title "ShellMCP Tunnel $RELEASE_TAG" --notes-file release-notes.md
           gh release edit "$RELEASE_TAG" --draft=false --latest

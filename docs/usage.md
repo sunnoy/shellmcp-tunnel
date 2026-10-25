@@ -4,6 +4,8 @@
 
 只需 Tunnel ID 和有 Tunnels Read + Use 权限的 API key。安装脚本从 [本项目 Release](https://github.com/sunnoy/shellmcp-tunnel/releases/latest) 下载当前系统的预编译 Rust 二进制，安装器再从 [OpenAI 官方 Release](https://github.com/openai/tunnel-client/releases/tag/v0.0.16) 下载 tunnel-client，两步都校验 SHA-256。目标电脑无需 clone 仓库，也无需 Git、Rust 或 Python。
 
+提供 Linux、macOS 的 x86_64 / ARM64，以及 Windows x86_64 安装包。Windows ARM64 尚未通过稳定性验收，暂不提供安装包。
+
 先由 Agent 将 key 保存为仅当前用户可访问的私有文件，文件只包含密钥本身。将下面的 Tunnel ID 和 key 文件路径替换后执行；其余参数使用默认值即可。
 
 Windows（PowerShell）：
@@ -65,7 +67,7 @@ cargo run --bin package-local -- \
 
 支持平台名：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64`、`windows-arm64`。只为实际提供的产物生成下载映射；未提供的平台直接报错。产物使用包含平台名的平铺文件名，可直接作为 GitHub Release 附件。
 
-推送与 Cargo 版本一致的 `v*` 标签后，[发布工作流](../.github/workflows/release.yml) 在六个原生 runner 上运行工具测试和编译，全部成功才打包。工作流上传所有二进制、安装脚本、许可证和 `SHA256SUMS`，然后公开 Release。打包工具本身不上传文件或修改服务。
+推送与 Cargo 版本一致的 `v*` 标签后，[发布工作流](../.github/workflows/release.yml) 在五个发行平台的原生 runner 上运行工具测试和编译，全部成功才打包。工作流上传所有二进制、安装脚本、许可证和 `SHA256SUMS`，然后公开 Release。打包工具本身不上传文件或修改服务。Windows ARM64 另列为实验性 CI，不进入发行包。
 
 引导脚本内嵌原生产物的 SHA-256，执行前检查非空和摘要。信任根是用户取得的可信引导脚本；目前尚无独立签名的更新清单/自动更新链路。官方 tunnel-client 固定为经测试的 v0.0.16，摘要直接内置在 Rust 安装器，更新版本须重新审核并构建。下载包中的许可证保留。
 

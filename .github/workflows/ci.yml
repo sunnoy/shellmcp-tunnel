@@ -9,6 +9,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest, windows-11-arm]
     runs-on: ${{ matrix.os }}
+    # Windows ARM64 is experimental and is not included in public releases.
+    continue-on-error: ${{ matrix.os == 'windows-11-arm' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

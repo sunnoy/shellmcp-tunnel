@@ -2,6 +2,8 @@
 
 原生 Rust 本地 MCP 服务，通过官方 OpenAI `tunnel-client` 接入 ChatGPT。Linux、macOS、Windows 共用执行核心，安装器下载并管理官方隧道客户端，安装和运行无需 Python。
 
+发行包支持 Linux、macOS 的 x86_64 / ARM64，以及 Windows x86_64。Windows ARM64 仍为实验性支持，暂不提供发行包。
+
 当前为早期版本：Linux x86_64 与 Windows x86_64 已实测，macOS 服务安装和 ARM64 完整安装尚未实机验收，ChatGPT 外部工具调用也仍待验收。具体见 [验收记录](docs/acceptance.md)。使用前阅读 [安全边界](SECURITY.md)。
 
 ## 连接机制
@@ -93,7 +95,7 @@ cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 ```
 
-开发使用支持 Rust 2024 edition 的稳定工具链和平台原生 C/C++ 编译工具，构建产物在 `target/release/`。发布版本由 GitHub Actions 构建六个平台的原生二进制，生成带 SHA-256 的安装脚本并上传到 [Releases](https://github.com/sunnoy/shellmcp-tunnel/releases)。当前没有定时自动更新；更新时重新下载 Release 安装脚本并执行，安装器替换两个服务并验证，失败则恢复之前的服务定义和发行目录。官方 tunnel-client 版本固定为 v0.0.16，不跟踪 latest。
+开发使用支持 Rust 2024 edition 的稳定工具链和平台原生 C/C++ 编译工具，构建产物在 `target/release/`。发布版本由 GitHub Actions 构建五个平台的原生二进制，生成带 SHA-256 的安装脚本并上传到 [Releases](https://github.com/sunnoy/shellmcp-tunnel/releases)。当前没有定时自动更新；更新时重新下载 Release 安装脚本并执行，安装器替换两个服务并验证，失败则恢复之前的服务定义和发行目录。官方 tunnel-client 版本固定为 v0.0.16，不跟踪 latest。
 
 打包、服务管理和平台限制见 [操作文档](docs/usage.md)，验证范围见 [验收记录](docs/acceptance.md)。
 
