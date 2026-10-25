@@ -10,6 +10,8 @@
 
 Windows（PowerShell）：
 
+Windows 发行包使用微软 Visual C++ v14 x64 运行库；若系统缺少 `VCRUNTIME140.dll`，由 Agent 先安装[微软官方 x64 运行库](https://aka.ms/vc14/vc_redist.x64.exe)，无需安装 Visual Studio 或编译工具。版本与系统要求见[微软说明](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)。
+
 ```powershell
 $installer = Join-Path $env:TEMP ('shellmcp-install-' + [Guid]::NewGuid().ToString() + '.ps1')
 try {
@@ -100,4 +102,4 @@ CLI 不会添加到全局 PATH。可从下载包运行，也可以从 `install.j
 
 Windows 使用 x86_64 实机运行本地 MCP 回归，另通过真正的交互登录计划任务验证 GUI 宿主；测试不是单纯交叉编译。发现并修复了任务 XML 编码、当前用户 SID、Windows 路径规范化以及回滚进程锁/启动顺序问题。完整结果和未完成项见 [2026-10-25 验收记录](acceptance.md)。
 
-macOS 的原生编译和工具测试由 CI 验证，LaunchAgent 安装/回滚尚未实机验收。Windows ARM64 和 Linux ARM64 未做本次运行验证。不得把跨平台编译或工具测试描述为所有平台完整安装已实测。
+Linux ARM64 和 macOS 两种架构的原生编译与工具测试由 CI 验证，完整服务安装/回滚尚未实机验收。Windows ARM64 仍为实验性支持，任务完成测试存在不稳定结果，暂不发布该架构。不得把跨平台编译或工具测试描述为所有平台完整安装已实测。

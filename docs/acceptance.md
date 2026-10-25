@@ -1,6 +1,17 @@
 # 验收记录：2026-10-25
 
-代码版本：Rust agent 0.3.0；官方 tunnel-client 固定 v0.0.16。本记录包含安装流程测试和源码验证。服务安装测试环境为 Linux x86_64 与 Windows x86_64；其余平台的服务生命周期尚未实机验收。
+早期安装测试版本：Rust agent 0.3.0；当前公开发行版本：v0.3.2。官方 tunnel-client 固定 v0.0.16。本记录包含安装流程测试和源码验证。服务安装测试环境为 Linux x86_64 与 Windows x86_64；其余平台的服务生命周期尚未实机验收。
+
+## 二进制发行与下载验证
+
+[v0.3.2 Release](https://github.com/sunnoy/shellmcp-tunnel/releases/tag/v0.3.2) 已公开：Linux、macOS 的 x86_64 / ARM64，以及 Windows x86_64，共五个平台。产物取自 [v0.3.2 构建记录](https://github.com/sunnoy/shellmcp-tunnel/actions/runs/40190351287) 中通过原生测试和构建的五个任务，已核对对应源码提交。该轮 Windows ARM64 任务失败，整体自动发布任务跳过；此次仅组装并上传五个成功任务的产物。后续发布工作流已明确采用这五个平台。
+
+- 11 个公开附件包含原生程序、安装脚本、产物映射、许可证和校验清单；GitHub 返回的每个附件 SHA-256 均与本地产物一致。
+- Linux x86_64 和 Windows x86_64 测试机直接执行操作文档中的下载命令，仅替换占位参数并启用 dry-run。脚本从公开 `releases/latest/download` 地址取得，实际原生程序下载、SHA-256 校验和 CLI 启动均通过，无需 clone 或编译。
+- Windows 验证后，计划任务、相关进程、18700/18710 监听和新增引导脚本临时文件均为 0；两台机器均未创建 dry-run 指定的安装数据目录。
+- Windows ARM64 曾出现首次 PowerShell 探测超过 5 秒，以及任务在同步等待期内未完成的测试失败。启动探测已放宽至 15 秒，日常健康探测仍为 5 秒；该架构暂列实验性 CI，不提供发行包。
+
+这轮验证覆盖公开下载和原生启动，不代表 v0.3.2 已重新完成全部服务生命周期或外部 ChatGPT 工具调用验收。Windows x86_64 程序依赖微软 Visual C++ v14 运行库，准备方式见[安装说明](usage.md#安装)。
 
 ## 安装流程测试
 
@@ -38,7 +49,7 @@ Windows 默认目录为 `%LOCALAPPDATA%\ShellMCP-Agent-Local`，运行两个当�
 ## 尚未完成或不包含
 
 - **ChatGPT 外部工具调用未通过验收。** 官方隧道已成功初始化 MCP 并轮询 OpenAI；尚无 ChatGPT 工具调用成功的验收记录。
-- macOS 的编译和工具测试已通过 CI，服务安装与回滚尚未实机验收；Linux ARM64、Windows ARM64 未做本次实机运行验证。
+- macOS 和 Linux ARM64 的编译与工具测试已通过原生 CI，完整服务安装与回滚尚未实机验收；Windows ARM64 尚未通过稳定性验收。
 - 目前无定时自动更新、无独立签名更新清单。新发行包重跑安装器可替换两组件；tunnel-client 版本和 SHA-256 随 agent 源码固定，不追踪 latest。
 - 早期 `target/local-distribution-20261025` 是使用占位 URL 的本地产物，不作为公共发行包。公开发行由 [发布工作流](../.github/workflows/release.yml) 从对应标签重新构建和打包。
 - `local uninstall --purge` 已实现，但本轮 Windows 操作测试使用默认保留数据的卸载；未删除真实测试实例的数据目录。卸载不会删除 OpenAI 远端 tunnel。
