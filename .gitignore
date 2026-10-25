@@ -1,0 +1,17 @@
+/target/
+*.key
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+audit.jsonl*
+host.log
+tunnel.log*
+/data/
+/dist/

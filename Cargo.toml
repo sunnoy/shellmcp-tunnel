@@ -1,0 +1,49 @@
+[package]
+name = "shellmcp-agent"
+version = "0.3.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Native local MCP server with OpenAI tunnel-client installation"
+repository = "https://github.com/sunnoy/shellmcp-tunnel"
+
+[[bin]]
+name = "shellmcp-agent"
+path = "src/main.rs"
+
+[[bin]]
+name = "shellmcp-host"
+path = "src/bin/shellmcp-host.rs"
+
+[[bin]]
+name = "package-local"
+path = "src/bin/package-local.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+fs2 = "0.4"
+hex = "0.4"
+hostname = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7" }
+rmcp = { version = "=3.5.1", default-features = false, features = ["server", "transport-streamable-http-server"] }
+tokio-util = { version = "0.7" }
+zip = { version = "9", default-features = false, features = ["deflate"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+regex = "1"
+similar = "2"
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+walkdir = "2"
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Storage_FileSystem", "Win32_Security"] }
+[dev-dependencies]
+tempfile = "3"
