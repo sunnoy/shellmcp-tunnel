@@ -6,7 +6,7 @@
 
 提供 Linux、macOS 的 x86_64 / ARM64，以及 Windows x86_64 安装包。Windows ARM64 尚未通过稳定性验收，暂不提供安装包。
 
-先由 Agent 将 key 保存为仅当前用户可访问的私有文件，文件只包含密钥本身。将下面的 Tunnel ID 和 key 文件路径替换后执行；其余参数使用默认值即可。
+直接填写 Tunnel ID 和密钥内容的命令见 [README 一键安装](../README.md#安装)。下面是私有文件传参方式：将 key 保存为仅当前用户可访问的文件，文件只包含密钥本身，再替换命令中的 Tunnel ID 和 key 文件路径。
 
 Windows（PowerShell）：
 
@@ -37,7 +37,7 @@ Linux / macOS（bash）：
 
 也可以直接下载并保留 Release 中的安装脚本，以后执行 `bash install-local.sh --tunnel-id … --key-file …` 或 `powershell.exe -ExecutionPolicy Bypass -File .\install-local.ps1 -TunnelId … -KeyFile …`。已下载脚本固定到对应版本；升级时重新下载新版本脚本。
 
-不要把密钥作为命令参数。也可以使用 Unix `--key-env OPENAI_TUNNEL_KEY` 或 Windows `-KeyEnv OPENAI_TUNNEL_KEY` 指定环境变量**名称**，安装器会导入到私有文件。重装可复用已经保存的 key。
+原生 CLI 接收密钥文件路径或环境变量名称。也可以使用 Unix `--key-env OPENAI_TUNNEL_KEY` 或 Windows `-KeyEnv OPENAI_TUNNEL_KEY` 指定环境变量**名称**，安装器会导入到私有文件；README 的两参数命令已封装此转换。重装可复用已经保存的 key。
 
 安装命令配置两个用户后台服务，并等待本地 MCP 就绪和 OpenAI 轮询成功。Windows 计划任务直接运行 GUI 子系统的 Rust 宿主，业务 PowerShell 和 tunnel-client 都以无控制台方式创建。
 

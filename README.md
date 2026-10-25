@@ -29,23 +29,51 @@ flowchart LR
 
 1. 在 [Platform 隧道设置](https://platform.openai.com/settings/organization/tunnels) 创建或选择隧道，取得 `tunnel_id`。创建/管理需要组织级的 **Tunnels Read + Manage** 权限。
 2. 将隧道关联到目标 Platform 组织和 ChatGPT 工作区。运行客户端、在 ChatGPT 中选择隧道需要 **Tunnels Read + Use**；ChatGPT 工作区还需允许使用自定义 MCP。
-3. 准备有相应隧道使用权限的 API key，安装时由 Agent 保存为本机私有文件。key 由 tunnel-client 使用，不作为本地 MCP 的 Bearer 凭据。
+3. 准备有相应隧道使用权限的 API key，安装器会自动保存为本机私有文件。key 由 tunnel-client 使用，不作为本地 MCP 的 Bearer 凭据。
 
 权限与关联规则以 [官方接入说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#permissions-and-access) 为准；安装器不会创建隧道或修改工作区权限。
 
 ## 安装
 
-填写 ID 和 key，将以下提示词交给能操作目标电脑的 Agent：
+复制对应系统的整段命令，将末尾的 `tunnel_你的ID sk-你的APIkey` 替换为实际值：**第一个参数是 Tunnel ID，第二个是密钥内容，用空格隔开**。安装器下载 Release 二进制和 OpenAI 官方 tunnel-client，配置后台运行及登录自启动。
 
-```text
-请按说明运行对应系统的 Release 安装脚本，安装 ShellMCP Tunnel，使用默认配置并后台自启动：
-https://github.com/sunnoy/shellmcp-tunnel/blob/main/docs/usage.md#安装
+**Windows — 在系统 PowerShell 中执行：**
 
-Tunnel ID：<你的 ID>
-API key：<你的 key>
-
-密钥保存为仅当前用户可读的文件，通过文件传给安装器，不回显。完成后验证 MCP 和隧道连接，提供 ChatGPT 接入及卸载方法。
+```powershell
+& {
+    param($TunnelId, $ApiKey)
+    $ErrorActionPreference = 'Stop'
+    $installer = Join-Path $env:TEMP ('shellmcp-install-' + [Guid]::NewGuid().ToString() + '.ps1')
+    $previousKey = $env:SHELLMCP_INSTALL_KEY
+    try {
+        Invoke-WebRequest -UseBasicParsing 'https://github.com/sunnoy/shellmcp-tunnel/releases/latest/download/install-local.ps1' -OutFile $installer
+        if ((Get-Item $installer).Length -eq 0) { throw 'Empty installer download' }
+        $env:SHELLMCP_INSTALL_KEY = $ApiKey
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -TunnelId $TunnelId -KeyEnv SHELLMCP_INSTALL_KEY
+        if ($LASTEXITCODE -ne 0) { throw "Installation failed: $LASTEXITCODE" }
+    } finally {
+        $env:SHELLMCP_INSTALL_KEY = $previousKey
+        Remove-Item -LiteralPath $installer -ErrorAction SilentlyContinue
+    }
+} tunnel_你的ID sk-你的APIkey
 ```
+
+**Linux / macOS — 在终端中执行：**
+
+```sh
+bash -c '
+  set -eu
+  installer="$(mktemp)"
+  trap '\''rm -f "$installer"'\'' EXIT
+  curl --proto "=https" --tlsv1.2 -fsSL https://github.com/sunnoy/shellmcp-tunnel/releases/latest/download/install-local.sh -o "$installer"
+  test -s "$installer"
+  SHELLMCP_INSTALL_KEY="$2" bash "$installer" --tunnel-id "$1" --key-env SHELLMCP_INSTALL_KEY
+' -- tunnel_你的ID sk-你的APIkey
+```
+
+Windows 安装使用 `schtasks.exe` 配置无窗口自启动；Agent 沙箱拦截时，请自行在系统 PowerShell 执行。企业策略限制需由管理员授权。
+
+直接填写密钥的命令可能保存在终端历史中；私有文件传参及更多选项见 [安装说明](docs/usage.md#安装)。
 
 ## 使用
 
