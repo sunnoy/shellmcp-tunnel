@@ -1,5 +1,5 @@
 use super::config::LocalConfig;
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use axum::{
     Json, Router,
     extract::{Request, State},
@@ -178,6 +178,13 @@ async fn perimeter(State(app): State<App>, mut request: Request, next: Next) -> 
 }
 
 pub async fn readiness(dir: &Path) -> Result<serde_json::Value> {
+    readiness_with_shell_timeout(dir, Duration::from_secs(5)).await
+}
+
+async fn readiness_with_shell_timeout(
+    dir: &Path,
+    shell_timeout: Duration,
+) -> Result<serde_json::Value> {
     let c = super::config::load(dir)?;
     ensure!(
         crate::policy::load_checked(dir)?.mode != crate::policy::Mode::Disabled,
@@ -206,8 +213,9 @@ pub async fn readiness(dir: &Path) -> Result<serde_json::Value> {
     #[cfg(windows)]
     cmd.creation_flags(0x08000000);
     ensure!(
-        tokio::time::timeout(Duration::from_secs(5), cmd.status())
-            .await??
+        tokio::time::timeout(shell_timeout, cmd.status())
+            .await
+            .context("shell readiness probe timed out")??
             .success(),
         "shell readiness failed"
     );
@@ -239,7 +247,9 @@ pub async fn run(dir: &Path, release_dir: Option<&Path>) -> Result<()> {
         .open(dir.join("local.lock"))?;
     fs2::FileExt::try_lock_exclusive(&lock)
         .map_err(|e| anyhow::anyhow!("local agent lock: {e}"))?;
-    readiness(dir).await?;
+    // PowerShell's first launch can take longer on a cold Windows ARM64 host.
+    // Keep this within the installer's 20s startup budget; normal probes stay at 5s.
+    readiness_with_shell_timeout(dir, Duration::from_secs(15)).await?;
     let listener = tokio::net::TcpListener::bind(config.listen).await?;
     let app = App {
         dir: dir.to_owned(),

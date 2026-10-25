@@ -44,7 +44,11 @@ impl Local {
                 .unwrap(),
             session: String::new(),
         };
-        for i in 0..100 {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+        loop {
+            if let Some(status) = s.child.try_wait().unwrap() {
+                panic!("server exited before becoming ready: {status}");
+            }
             if s.http
                 .get(format!("{}/readyz", s.url))
                 .send()
@@ -53,7 +57,7 @@ impl Local {
             {
                 break;
             }
-            assert!(i < 99, "server not ready");
+            assert!(tokio::time::Instant::now() < deadline, "server not ready");
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         let response = s.http.post(format!("{}/mcp",s.url)).header("Accept","application/json, text/event-stream").json(&json!({"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"native-test","version":"1"}}})).send().await.unwrap();
