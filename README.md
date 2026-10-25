@@ -2,9 +2,7 @@
 
 原生 Rust 本地 MCP 服务，通过官方 OpenAI `tunnel-client` 接入 ChatGPT。Linux、macOS、Windows 共用执行核心，安装器下载并管理官方隧道客户端，安装和运行无需 Python。
 
-本仓库专用于本地 MCP + OpenAI 隧道，已经移除原 ShellMCP 云平台注册、WebSocket、签名许可及云端更新实现。项目名为 `shellmcp-tunnel`，二进制名 `shellmcp-agent`、`shellmcp-host` 和 `local` 子命令沿用原生安装接口。
-
-当前为早期版本：Linux x86_64 与 Windows x86_64 已实测，macOS 服务安装和 ARM64 完整安装尚未实机验收，ChatGPT 外部工具调用也仍待验收。具体见 [验收记录](docs/local-acceptance.md)。使用前阅读 [安全边界](SECURITY.md)。
+当前为早期版本：Linux x86_64 与 Windows x86_64 已实测，macOS 服务安装和 ARM64 完整安装尚未实机验收，ChatGPT 外部工具调用也仍待验收。具体见 [验收记录](docs/acceptance.md)。使用前阅读 [安全边界](SECURITY.md)。
 
 ## 连接机制
 
@@ -12,7 +10,7 @@
 
 ```mermaid
 flowchart LR
-    App["ChatGPT / Responses API"] -->|提交工具请求| OpenAI["OpenAI 隧道服务"]
+    App["ChatGPT"] -->|提交工具请求| OpenAI["OpenAI 隧道服务"]
     subgraph Computer["你的电脑"]
         Tunnel["官方 tunnel-client"]
         Agent["Rust MCP：127.0.0.1:18700/mcp"]
@@ -33,7 +31,7 @@ flowchart LR
 
 权限与关联规则以 [官方接入说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#permissions-and-access) 为准；安装器不会创建隧道或修改工作区权限。
 
-## 安装本地模式
+## 安装
 
 先从源码构建 `shellmcp-agent`（见下文）；Windows 还需同目录的 `shellmcp-host.exe`。然后运行一次：
 
@@ -59,7 +57,7 @@ flowchart LR
 | `--tunnel-archive` | 可选离线缓存，必须匹配内置的官方版本和 SHA-256 |
 | `--dry-run` | 只显示脱敏参数，不安装 |
 
-当前只发布源码，尚未提供二进制发行包或一键下载 URL。可从源码构建；`package-local` 可生成下载两个原生组件的 `install-local.sh` / `install-local.ps1` 引导脚本，但生成不等于发布。具体见 [本地模式操作与验收](docs/local-mode.md)。
+当前只发布源码，尚未提供二进制发行包或一键下载 URL。可从源码构建；`package-local` 可生成下载两个原生组件的 `install-local.sh` / `install-local.ps1` 引导脚本，但生成不等于发布。具体见 [使用文档](docs/usage.md)。
 
 ## 使用
 
@@ -72,21 +70,6 @@ flowchart LR
 3. 在对话中启用该连接，要求调用 `get_environment`，核对返回的主机、系统和版本。
 
 看不到隧道时，先核对上面的工作区关联和权限。[官方 ChatGPT 接入步骤](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#connect-from-chatgpt)
-
-### 接入 Responses API
-
-在 MCP 工具配置中使用 `tunnel_id`；`server_url` 用于直接可达的 MCP 服务，不填 OpenAI 托管隧道地址。[官方 API 接入说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#connect-from-the-responses-api)
-
-```json
-{
-  "type": "mcp",
-  "server_label": "my_computer",
-  "tunnel_id": "tunnel_你的ID",
-  "allowed_tools": ["get_environment"]
-}
-```
-
-这是请求中 `tools` 数组的一项。外部工具调用成功才算完成端到端验收；`doctor` 通过仅证明两个本机组件就绪。实测中，Responses API 返回 `429 credit_balance_exhausted` 时隧道仍可正常轮询，模型测试需先解决 API 余额问题，见 [验收记录](docs/local-acceptance.md)。
 
 ### 日常管理
 
@@ -122,7 +105,7 @@ cargo clippy --locked --all-targets -- -D warnings
 
 使用支持 Rust 2024 edition 的稳定工具链和平台原生 C/C++ 编译工具。构建产物在 `target/release/`；运行时不需要 Rust 工具链。当前没有定时自动更新；更新时用新构建或新发行包重新执行安装命令，安装器替换两个服务并验证，失败则恢复之前的服务定义和发行目录。官方 tunnel-client 版本固定为 v0.0.16，不跟踪 latest。
 
-打包、服务管理和平台限制见 [操作文档](docs/local-mode.md)，验证范围见 [验收记录](docs/local-acceptance.md)。
+打包、服务管理和平台限制见 [操作文档](docs/usage.md)，验证范围见 [验收记录](docs/acceptance.md)。
 
 ## 许可证
 
