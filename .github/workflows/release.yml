@@ -1,0 +1,117 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-amd64
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04-arm
+            platform: linux-arm64
+            target: aarch64-unknown-linux-gnu
+          - os: macos-15-intel
+            platform: darwin-amd64
+            target: x86_64-apple-darwin
+          - os: macos-15
+            platform: darwin-arm64
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            platform: windows-amd64
+            target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            platform: windows-arm64
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Check version and native target
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_TARGET: ${{ matrix.target }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml)
+          test "$RELEASE_TAG" = "v$version"
+          rustc -vV | grep -Fx "host: $EXPECTED_TARGET"
+      - run: cargo test --locked
+      - run: cargo build --release --locked --bin shellmcp-agent --bin shellmcp-host
+      - name: Stage native executables
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          mkdir -p "artifacts/$PLATFORM"
+          if [[ "$PLATFORM" == windows-* ]]; then
+            cp target/release/shellmcp-agent.exe target/release/shellmcp-host.exe "artifacts/$PLATFORM/"
+          else
+            cp target/release/shellmcp-agent "artifacts/$PLATFORM/"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: artifacts
+          merge-multiple: true
+      - name: Package installers and checksums
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cargo run --locked --bin package-local -- \
+            --out dist \
+            --base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG" \
+            --artifact linux-amd64=artifacts/linux-amd64/shellmcp-agent \
+            --artifact linux-arm64=artifacts/linux-arm64/shellmcp-agent \
+            --artifact darwin-amd64=artifacts/darwin-amd64/shellmcp-agent \
+            --artifact darwin-arm64=artifacts/darwin-arm64/shellmcp-agent \
+            --artifact windows-amd64=artifacts/windows-amd64/shellmcp-agent.exe \
+            --artifact windows-arm64=artifacts/windows-arm64/shellmcp-agent.exe \
+            --host-artifact windows-amd64=artifacts/windows-amd64/shellmcp-host.exe \
+            --host-artifact windows-arm64=artifacts/windows-arm64/shellmcp-host.exe
+          cp LICENSE dist/LICENSE
+          shellcheck -S warning dist/install-local.sh
+          bash -n dist/install-local.sh
+          cd dist
+          sha256sum -- ./* > SHA256SUMS
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cat > release-notes.md <<'NOTES'
+          Prebuilt Rust executables for Linux, macOS and Windows (x86_64 / ARM64).
+
+          Download `install-local.sh` or `install-local.ps1` and pass your Tunnel ID and key file. The installer selects and verifies the native executable, downloads the pinned official OpenAI tunnel-client, and configures background services. Git, Rust and Python are not required on the destination computer.
+
+          Installation commands: https://github.com/sunnoy/shellmcp-tunnel/blob/main/docs/usage.md#安装
+
+          Native builds and tool tests run on all six platforms. Full service installation has been tested on Linux x86_64 and Windows x86_64; other service lifecycles and external ChatGPT calls remain unverified. See docs/acceptance.md for details.
+          NOTES
+          gh release create "$RELEASE_TAG" dist/* --verify-tag --draft --title "ShellMCP Tunnel $RELEASE_TAG" --notes-file release-notes.md
+          gh release edit "$RELEASE_TAG" --draft=false --latest

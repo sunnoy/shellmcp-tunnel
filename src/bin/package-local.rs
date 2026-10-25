@@ -71,25 +71,27 @@ fn main() -> Result<()> {
     let mut shell = String::new();
     let mut windows = serde_json::Map::new();
     let mut manifest = serde_json::Map::new();
+    std::fs::create_dir_all(&args.out)?;
     for (platform, source) in &agents {
-        let dir = args.out.join(platform);
-        std::fs::create_dir_all(&dir)?;
         let windows_target = platform.starts_with("windows");
         let filename = if windows_target {
-            "shellmcp-agent.exe"
+            format!("shellmcp-agent-{platform}.exe")
         } else {
-            "shellmcp-agent"
+            format!("shellmcp-agent-{platform}")
         };
         let bytes = std::fs::read(source)?;
         let hash = hex::encode(Sha256::digest(&bytes));
-        std::fs::write(dir.join(filename), bytes)?;
-        let agent =
-            serde_json::json!({"url":format!("{base}/{platform}/{filename}"),"sha256":hash});
+        std::fs::write(args.out.join(&filename), bytes)?;
+        let agent = serde_json::json!({"url":format!("{base}/{filename}"),"sha256":hash});
+        let mut components = serde_json::json!({"agent":agent});
         if windows_target {
             let bytes = std::fs::read(&hosts[platform])?;
             let hash = hex::encode(Sha256::digest(&bytes));
-            std::fs::write(dir.join("shellmcp-host.exe"), bytes)?;
-            windows.insert(platform.clone(),serde_json::json!({"agent":agent,"host":{"url":format!("{base}/{platform}/shellmcp-host.exe"),"sha256":hash}}));
+            let filename = format!("shellmcp-host-{platform}.exe");
+            std::fs::write(args.out.join(&filename), bytes)?;
+            components["host"] =
+                serde_json::json!({"url":format!("{base}/{filename}"),"sha256":hash});
+            windows.insert(platform.clone(), components.clone());
         } else {
             let uname = match platform.as_str() {
                 "linux-amd64" => "Linux-x86_64",
@@ -98,10 +100,10 @@ fn main() -> Result<()> {
                 _ => "Darwin-arm64",
             };
             shell.push_str(&format!(
-                "  {uname}) agent_url='{base}/{platform}/{filename}'; agent_sha='{hash}' ;;\n"
+                "  {uname}) agent_url='{base}/{filename}'; agent_sha='{hash}' ;;\n"
             ));
         }
-        manifest.insert(platform.clone(), agent);
+        manifest.insert(platform.clone(), components);
     }
     let sh = include_str!("../../scripts/install-local.sh").replace("# @ARTIFACTS@", &shell);
     let ps = include_str!("../../scripts/install-local.ps1")

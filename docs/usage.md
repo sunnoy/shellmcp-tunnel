@@ -1,6 +1,54 @@
 # 使用与维护
 
-## 构建与分发
+## 安装
+
+只需 Tunnel ID 和有 Tunnels Read + Use 权限的 API key。安装脚本从 [本项目 Release](https://github.com/sunnoy/shellmcp-tunnel/releases/latest) 下载当前系统的预编译 Rust 二进制，安装器再从 [OpenAI 官方 Release](https://github.com/openai/tunnel-client/releases/tag/v0.0.16) 下载 tunnel-client，两步都校验 SHA-256。目标电脑无需 clone 仓库，也无需 Git、Rust 或 Python。
+
+先由 Agent 将 key 保存为仅当前用户可访问的私有文件，文件只包含密钥本身。将下面的 Tunnel ID 和 key 文件路径替换后执行；其余参数使用默认值即可。
+
+Windows（PowerShell）：
+
+```powershell
+$installer = Join-Path $env:TEMP ('shellmcp-install-' + [Guid]::NewGuid().ToString() + '.ps1')
+try {
+    Invoke-WebRequest -UseBasicParsing 'https://github.com/sunnoy/shellmcp-tunnel/releases/latest/download/install-local.ps1' -OutFile $installer
+    if ((Get-Item $installer).Length -eq 0) { throw 'Empty installer download' }
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -TunnelId tunnel_你的ID -KeyFile "$env:USERPROFILE\tunnel-runtime.key"
+    if ($LASTEXITCODE -ne 0) { throw "Installation failed: $LASTEXITCODE" }
+} finally { Remove-Item -LiteralPath $installer -ErrorAction SilentlyContinue }
+```
+
+Linux / macOS（bash）：
+
+```sh
+(
+  set -eu
+  installer="$(mktemp)"
+  trap 'rm -f "$installer"' EXIT
+  curl --proto '=https' --tlsv1.2 -fsSL 'https://github.com/sunnoy/shellmcp-tunnel/releases/latest/download/install-local.sh' -o "$installer"
+  test -s "$installer"
+  bash "$installer" --tunnel-id tunnel_你的ID --key-file "$HOME/.config/openai/tunnel-runtime.key"
+)
+```
+
+也可以直接下载并保留 Release 中的安装脚本，以后执行 `bash install-local.sh --tunnel-id … --key-file …` 或 `powershell.exe -ExecutionPolicy Bypass -File .\install-local.ps1 -TunnelId … -KeyFile …`。已下载脚本固定到对应版本；升级时重新下载新版本脚本。
+
+不要把密钥作为命令参数。也可以使用 Unix `--key-env OPENAI_TUNNEL_KEY` 或 Windows `-KeyEnv OPENAI_TUNNEL_KEY` 指定环境变量**名称**，安装器会导入到私有文件。重装可复用已经保存的 key。
+
+安装命令配置两个用户后台服务，并等待本地 MCP 就绪和 OpenAI 轮询成功。Windows 计划任务直接运行 GUI 子系统的 Rust 宿主，业务 PowerShell 和 tunnel-client 都以无控制台方式创建。
+
+| Unix 参数 | PowerShell 参数 | 默认值 / 用途 |
+|---|---|---|
+| `--tunnel-id` | `-TunnelId` | OpenAI Tunnel ID；独立机器使用独立隧道 |
+| `--key-file` / `--key-env` | `-KeyFile` / `-KeyEnv` | 二选一；runtime key 需要 Tunnels Read + Use |
+| `--data-dir` | `-DataDir` | Windows `%LOCALAPPDATA%\ShellMCP-Agent-Local`；Unix `~/.local/share/shellmcp-agent-local` |
+| `--listen` | `-Listen` | `127.0.0.1:18700`，MCP 路径 `/mcp` |
+| `--health` | `-Health` | `127.0.0.1:18710`，官方隧道健康面 |
+| `--dry-run` | `-DryRun` | 下载并校验原生二进制，显示脱敏安装参数，不创建服务 |
+
+## 开发与发布
+
+以下仅供维护者构建和发布使用，安装用户直接执行上面的命令。
 
 `cargo build --release --locked --bin shellmcp-agent --bin shellmcp-host` 构建 MCP 服务和隧道管理程序。无需 Python。Windows 的两个 exe 必须放在同一发行目录：CLI 用于安装/诊断，GUI 子系统 host 用于计划任务。
 
@@ -9,59 +57,19 @@
 ```sh
 cargo run --bin package-local -- \
   --out /private/shellmcp-release \
-  --base-url https://YOUR-RELEASE-HOST/shellmcp-tunnel/0.3.0 \
+  --base-url https://github.com/sunnoy/shellmcp-tunnel/releases/download/v0.3.0 \
   --artifact linux-amd64=target/release/shellmcp-agent \
   --artifact windows-amd64=/private/windows/shellmcp-agent.exe \
   --host-artifact windows-amd64=/private/windows/shellmcp-host.exe
 ```
 
-支持平台名：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64`、`windows-arm64`。只为实际提供的产物生成下载映射；未提供的平台直接报错。发布目录需要由维护者另行上传到受信 HTTPS 站点，本工具不会上传。
+支持平台名：`linux-amd64`、`linux-arm64`、`darwin-amd64`、`darwin-arm64`、`windows-amd64`、`windows-arm64`。只为实际提供的产物生成下载映射；未提供的平台直接报错。产物使用包含平台名的平铺文件名，可直接作为 GitHub Release 附件。
+
+推送与 Cargo 版本一致的 `v*` 标签后，[发布工作流](../.github/workflows/release.yml) 在六个原生 runner 上运行工具测试和编译，全部成功才打包。工作流上传所有二进制、安装脚本、许可证和 `SHA256SUMS`，然后公开 Release。打包工具本身不上传文件或修改服务。
 
 引导脚本内嵌原生产物的 SHA-256，执行前检查非空和摘要。信任根是用户取得的可信引导脚本；目前尚无独立签名的更新清单/自动更新链路。官方 tunnel-client 固定为经测试的 v0.0.16，摘要直接内置在 Rust 安装器，更新版本须重新审核并构建。下载包中的许可证保留。
 
-生成的 Windows 引导脚本参数：
-
-```powershell
-.\install-local.ps1 -TunnelId tunnel_你的ID -KeyFile "$env:USERPROFILE\tunnel-runtime.key"
-```
-
-Unix 引导脚本参数直接转交 Rust CLI：
-
-```sh
-bash install-local.sh --tunnel-id tunnel_你的ID --key-file "$HOME/tunnel-runtime.key"
-```
-
-不要直接执行仓库里的模板；只有打包后的脚本包含有效的产物 URL 和摘要。当前未发布公共安装 URL。
-
-## 安装
-
-首次安装只需 Tunnel ID 和有 Tunnels Read + Use 权限的 API key，其余参数使用默认值即可。先将 key 保存为仅当前用户可访问的私有文件，文件只包含密钥本身；不要把密钥作为命令参数。也可以使用 `--key-env OPENAI_TUNNEL_KEY` 指定环境变量**名称**，安装器会导入到私有文件。重装可复用已经保存的 key。
-
-完成上述构建后，在 `target/release/` 目录运行对应系统的安装命令。Windows 的 `shellmcp-agent.exe` 和 `shellmcp-host.exe` 必须在同一目录。
-
-Windows：
-
-```powershell
-.\shellmcp-agent.exe local install --tunnel-id tunnel_你的ID --key-file "$env:USERPROFILE\tunnel-runtime.key"
-```
-
-Linux / macOS：
-
-```sh
-./shellmcp-agent local install --tunnel-id tunnel_你的ID --key-file "$HOME/.config/openai/tunnel-runtime.key"
-```
-
-这条命令安装 Rust agent、下载并校验官方 tunnel-client、生成私有配置、注册两个用户后台服务，并等待本地 MCP 就绪和 OpenAI 轮询成功。Windows 计划任务直接运行 GUI 子系统的 Rust 宿主，业务 PowerShell 和 tunnel-client 都以无控制台方式创建。
-
-| 参数 | 默认值 / 用途 |
-|---|---|
-| `--tunnel-id` | OpenAI Tunnel ID；独立机器使用独立隧道 |
-| `--key-file` / `--key-env` | 二选一；runtime key 需要 Tunnels Read + Use |
-| `--data-dir` | Windows `%LOCALAPPDATA%\ShellMCP-Agent-Local`；Unix `~/.local/share/shellmcp-agent-local` |
-| `--listen` | `127.0.0.1:18700`，MCP 路径 `/mcp` |
-| `--health` | `127.0.0.1:18710`，官方隧道健康面 |
-| `--tunnel-archive` | 可选离线缓存，必须匹配内置的官方版本和 SHA-256 |
-| `--dry-run` | 只显示脱敏参数，不安装 |
+不要直接执行仓库里的模板；只有 Release 中打包后的脚本包含有效的产物 URL 和摘要。需要离线缓存官方 ZIP 时，可直接调用原生 CLI 的 `local install --tunnel-archive /path/to/archive.zip`，摘要仍必须匹配内置版本。
 
 ## 状态和服务
 

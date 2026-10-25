@@ -38,11 +38,11 @@ flowchart LR
 ```text
 请在这台电脑上安装 ShellMCP Tunnel，让 ChatGPT 通过 OpenAI 隧道调用这台电脑的工具。
 
-仓库：https://github.com/sunnoy/shellmcp-tunnel
+安装说明：https://github.com/sunnoy/shellmcp-tunnel/blob/main/docs/usage.md#安装
 Tunnel ID：<填写你的 Tunnel ID>
 API key：<填写你的 API key>
 
-请先阅读仓库 README 和 docs/usage.md，识别当前系统和架构，准备所需构建工具并从源码构建。使用项目自带安装器，按默认配置安装 Rust agent 和官方 tunnel-client，配置后台运行和登录自启动；Windows 下应无窗口运行。安装和运行无需 Python。
+请识别当前系统，按安装说明下载并执行对应的 Release 安装脚本，传入 Tunnel ID 和 key 文件路径。Rust agent 从 sunnoy/shellmcp-tunnel 的 GitHub Release 下载预编译二进制，tunnel-client 由安装器从 OpenAI 官方 GitHub Release 下载并校验。不要 clone 仓库或从源码构建，不需要安装 Git、Rust 或 Python。使用默认配置，设置后台运行和登录自启动；Windows 下应无窗口运行。
 
 请将 API key 保存到仅当前用户可访问的私有文件，通过文件传给安装器，不要回显密钥，也不要把它写入源码、命令参数或日志。
 
@@ -93,7 +93,7 @@ cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 ```
 
-使用支持 Rust 2024 edition 的稳定工具链和平台原生 C/C++ 编译工具。构建产物在 `target/release/`；运行时不需要 Rust 工具链。当前没有定时自动更新；更新时用新构建或新发行包重新执行安装命令，安装器替换两个服务并验证，失败则恢复之前的服务定义和发行目录。官方 tunnel-client 版本固定为 v0.0.16，不跟踪 latest。
+开发使用支持 Rust 2024 edition 的稳定工具链和平台原生 C/C++ 编译工具，构建产物在 `target/release/`。发布版本由 GitHub Actions 构建六个平台的原生二进制，生成带 SHA-256 的安装脚本并上传到 [Releases](https://github.com/sunnoy/shellmcp-tunnel/releases)。当前没有定时自动更新；更新时重新下载 Release 安装脚本并执行，安装器替换两个服务并验证，失败则恢复之前的服务定义和发行目录。官方 tunnel-client 版本固定为 v0.0.16，不跟踪 latest。
 
 打包、服务管理和平台限制见 [操作文档](docs/usage.md)，验证范围见 [验收记录](docs/acceptance.md)。
 

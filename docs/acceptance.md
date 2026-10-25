@@ -1,6 +1,6 @@
 # 验收记录：2026-10-25
 
-代码版本：Rust agent 0.3.0；官方 tunnel-client 固定 v0.0.16。本记录包含安装流程测试和源码验证；二进制分发包尚未公开发布。测试环境为 Linux x86_64 与 Windows x86_64；其余平台尚未实机验收。
+代码版本：Rust agent 0.3.0；官方 tunnel-client 固定 v0.0.16。本记录包含安装流程测试和源码验证。服务安装测试环境为 Linux x86_64 与 Windows x86_64；其余平台的服务生命周期尚未实机验收。
 
 ## 安装流程测试
 
@@ -22,7 +22,7 @@
 | 作业卸载保护 | Windows 运行真实后台作业时拒绝卸载，任务、监听、原 agent PID 保持不变 |
 | 默认卸载 | 作业完成后移除两个计划任务，18700/18710 无监听、install.json 移除；state.db 保留 |
 | 卸载后重装 | Windows 不传离线缓存，从官方 GitHub 地址重新下载并校验 tunnel-client，安装成功且 doctor 两组件健康 |
-| 原生引导脚本 | 打包后的 PowerShell 脚本在 Windows 运行通过摘要验证和原生 CLI dry-run；篡改 exe 被拒绝，临时目录清理。此项模拟了产物下载传输，未证明尚未发布的 URL 可下载 |
+| 原生引导脚本 | 早期打包后的 PowerShell 脚本在 Windows 运行通过摘要验证和原生 CLI dry-run；篡改 exe 被拒绝，临时目录清理。此项模拟了产物下载传输，不作为公共 Release 下载的验收证据 |
 | 静态检查 | fmt、clippy（warnings 为错误）、shellcheck、diff whitespace 与文档本地链接检查通过 |
 
 Windows 默认目录为 `%LOCALAPPDATA%\ShellMCP-Agent-Local`，运行两个当前用户登录任务：`shellmcp-local-<实例前12位>-agent` 和 `shellmcp-local-<实例前12位>-tunnel`。MCP 为 `127.0.0.1:18700/mcp`，隧道健康面为 `127.0.0.1:18710`。runtime key 存储在限制 ACL 的文件内，不作为命令行参数或仓库内容。验收时核对了运行文件的 SHA-256 与构建产物一致；日常状态以 `local doctor` 为准。
@@ -40,7 +40,7 @@ Windows 默认目录为 `%LOCALAPPDATA%\ShellMCP-Agent-Local`，运行两个当�
 - **ChatGPT 外部工具调用未通过验收。** 官方隧道已成功初始化 MCP 并轮询 OpenAI；尚无 ChatGPT 工具调用成功的验收记录。
 - macOS 的编译和工具测试已通过 CI，服务安装与回滚尚未实机验收；Linux ARM64、Windows ARM64 未做本次实机运行验证。
 - 目前无定时自动更新、无独立签名更新清单。新发行包重跑安装器可替换两组件；tunnel-client 版本和 SHA-256 随 agent 源码固定，不追踪 latest。
-- 未发布公共下载入口；`target/local-distribution-20261025` 仅是 Linux/Windows amd64 本地产物，脚本 URL 使用 `example.invalid` 占位。发布前须以真实 HTTPS 地址重新打包。
+- 早期 `target/local-distribution-20261025` 是使用占位 URL 的本地产物，不作为公共发行包。公开发行由 [发布工作流](../.github/workflows/release.yml) 从对应标签重新构建和打包。
 - `local uninstall --purge` 已实现，但本轮 Windows 操作测试使用默认保留数据的卸载；未删除真实测试实例的数据目录。卸载不会删除 OpenAI 远端 tunnel。
 - 本地 invocation 去重结果尚未 GC；默认卸载保留 key、作业数据及旧发行目录。
 
