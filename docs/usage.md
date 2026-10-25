@@ -33,6 +33,36 @@ bash install-local.sh --tunnel-id tunnel_你的ID --key-file "$HOME/tunnel-runti
 
 不要直接执行仓库里的模板；只有打包后的脚本包含有效的产物 URL 和摘要。当前未发布公共安装 URL。
 
+## 安装
+
+首次安装只需 Tunnel ID 和有 Tunnels Read + Use 权限的 API key，其余参数使用默认值即可。先将 key 保存为仅当前用户可访问的私有文件，文件只包含密钥本身；不要把密钥作为命令参数。也可以使用 `--key-env OPENAI_TUNNEL_KEY` 指定环境变量**名称**，安装器会导入到私有文件。重装可复用已经保存的 key。
+
+完成上述构建后，在 `target/release/` 目录运行对应系统的安装命令。Windows 的 `shellmcp-agent.exe` 和 `shellmcp-host.exe` 必须在同一目录。
+
+Windows：
+
+```powershell
+.\shellmcp-agent.exe local install --tunnel-id tunnel_你的ID --key-file "$env:USERPROFILE\tunnel-runtime.key"
+```
+
+Linux / macOS：
+
+```sh
+./shellmcp-agent local install --tunnel-id tunnel_你的ID --key-file "$HOME/.config/openai/tunnel-runtime.key"
+```
+
+这条命令安装 Rust agent、下载并校验官方 tunnel-client、生成私有配置、注册两个用户后台服务，并等待本地 MCP 就绪和 OpenAI 轮询成功。Windows 计划任务直接运行 GUI 子系统的 Rust 宿主，业务 PowerShell 和 tunnel-client 都以无控制台方式创建。
+
+| 参数 | 默认值 / 用途 |
+|---|---|
+| `--tunnel-id` | OpenAI Tunnel ID；独立机器使用独立隧道 |
+| `--key-file` / `--key-env` | 二选一；runtime key 需要 Tunnels Read + Use |
+| `--data-dir` | Windows `%LOCALAPPDATA%\ShellMCP-Agent-Local`；Unix `~/.local/share/shellmcp-agent-local` |
+| `--listen` | `127.0.0.1:18700`，MCP 路径 `/mcp` |
+| `--health` | `127.0.0.1:18710`，官方隧道健康面 |
+| `--tunnel-archive` | 可选离线缓存，必须匹配内置的官方版本和 SHA-256 |
+| `--dry-run` | 只显示脱敏参数，不安装 |
+
 ## 状态和服务
 
 - MCP：`http://127.0.0.1:18700/mcp`，`/healthz` 表示存活，`/readyz` 实测策略可用、数据库、写入和真实 shell。

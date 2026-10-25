@@ -27,37 +27,27 @@ flowchart LR
 
 1. 在 [Platform 隧道设置](https://platform.openai.com/settings/organization/tunnels) 创建或选择隧道，取得 `tunnel_id`。创建/管理需要组织级的 **Tunnels Read + Manage** 权限。
 2. 将隧道关联到目标 Platform 组织和 ChatGPT 工作区。运行客户端、在 ChatGPT 中选择隧道需要 **Tunnels Read + Use**；ChatGPT 工作区还需允许使用自定义 MCP。
-3. 准备有相应隧道使用权限的 runtime API key，保存为本机私有文件，供下面的 `--key-file` 读取。key 由 tunnel-client 使用，不作为本地 MCP 的 Bearer 凭据。
+3. 准备有相应隧道使用权限的 API key，安装时由 Agent 保存为本机私有文件。key 由 tunnel-client 使用，不作为本地 MCP 的 Bearer 凭据。
 
 权限与关联规则以 [官方接入说明](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#permissions-and-access) 为准；安装器不会创建隧道或修改工作区权限。
 
 ## 安装
 
-先从源码构建 `shellmcp-agent`（见下文）；Windows 还需同目录的 `shellmcp-host.exe`。然后运行一次：
+只需填写下面的 Tunnel ID 和 API key，把整段提示词交给能操作目标电脑终端的 Agent：
 
-```powershell
-.\shellmcp-agent.exe local install --tunnel-id tunnel_你的ID --key-file "$env:USERPROFILE\tunnel-runtime.key"
+```text
+请在这台电脑上安装 ShellMCP Tunnel，让 ChatGPT 通过 OpenAI 隧道调用这台电脑的工具。
+
+仓库：https://github.com/sunnoy/shellmcp-tunnel
+Tunnel ID：<填写你的 Tunnel ID>
+API key：<填写你的 API key>
+
+请先阅读仓库 README 和 docs/usage.md，识别当前系统和架构，准备所需构建工具并从源码构建。使用项目自带安装器，按默认配置安装 Rust agent 和官方 tunnel-client，配置后台运行和登录自启动；Windows 下应无窗口运行。安装和运行无需 Python。
+
+请将 API key 保存到仅当前用户可访问的私有文件，通过文件传给安装器，不要回显密钥，也不要把它写入源码、命令参数或日志。
+
+完成后检查两个后台服务、本机 MCP 就绪状态和 OpenAI 隧道轮询是否成功，报告实际结果、安装位置和检查/卸载命令，并告诉我如何在 ChatGPT 中连接这个隧道。
 ```
-
-```sh
-./shellmcp-agent local install --tunnel-id tunnel_你的ID --key-file "$HOME/.config/openai/tunnel-runtime.key"
-```
-
-这条命令安装 Rust agent、下载并校验官方 tunnel-client、生成私有配置、注册两个用户后台服务，并等待本地 MCP 就绪和 OpenAI 轮询成功。Windows 计划任务直接运行 GUI 子系统的 Rust 宿主，业务 PowerShell 和 tunnel-client 都以无控制台方式创建。
-
-必填参数只有 Tunnel ID 和 key 来源（首次安装）。key 文件只包含密钥本身；不要把密钥作为命令参数。也可以使用 `--key-env OPENAI_TUNNEL_KEY` 指定环境变量**名称**，安装器会导入到私有文件。重装可复用已经保存的 key。
-
-| 参数 | 默认值 / 用途 |
-|---|---|
-| `--tunnel-id` | OpenAI Tunnel ID；独立机器使用独立隧道 |
-| `--key-file` / `--key-env` | 二选一；runtime key 需要 Tunnels Read + Use |
-| `--data-dir` | Windows `%LOCALAPPDATA%\ShellMCP-Agent-Local`；Unix `~/.local/share/shellmcp-agent-local` |
-| `--listen` | `127.0.0.1:18700`，MCP 路径 `/mcp` |
-| `--health` | `127.0.0.1:18710`，官方隧道健康面 |
-| `--tunnel-archive` | 可选离线缓存，必须匹配内置的官方版本和 SHA-256 |
-| `--dry-run` | 只显示脱敏参数，不安装 |
-
-当前只发布源码，尚未提供二进制发行包或一键下载 URL。可从源码构建；`package-local` 可生成下载两个原生组件的 `install-local.sh` / `install-local.ps1` 引导脚本，但生成不等于发布。具体见 [使用文档](docs/usage.md)。
 
 ## 使用
 
